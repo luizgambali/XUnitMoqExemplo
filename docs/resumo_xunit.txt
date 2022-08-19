@@ -1,0 +1,491 @@
+
+Testes
+
+	Por que escrever testes?
+	
+		- Melhorar a qualidade do código
+		- Encontrar errors prematuramente
+		- Evitar problemas mais tarde em produção
+		
+	Tipos de teste
+	
+		- Testes de unidade
+		- Testes de integração
+		- Testes ponta a ponta (E2E)
+		- Testes de interface com usuario (UI)
+		
+	
+	AAA: Arrange, Act, Assert
+
+	Arrange: 	é onde se faz o setup do teste; criar instancias dos objetos, dados, entradas
+	
+	Act: 		é a execução do teste em si; chamar os métodos, setar o valor das propriedades
+	
+	Assert: 	verificação dos resultados; verificar se o teste foi bem sucedido ou não
+	
+				Avaliar e verificar o resultado de um teste, com base no resultado retornado, no estado final 
+				do objeto ou na ocorrência de eventos observados durante a execução. Um Assert pode passar ou 
+				falhar. Se todas os Asserts forem aprovadas, o teste será aprovado; se alguma Assert falhar, 
+				o teste falha
+				
+				Pode haver mais de um Assert por teste, porém, a inclusão de outros Asserts devem fazer 
+				sentido. O padrão é haver apenas um Assert por teste.
+	
+			
+	Nomenclatura (sugerida pelo autor do curso):
+	
+		- Na classe, sufixo "Should"
+		- Nos métodos, prefixo "Be"
+		
+		Desta forma, ficaria padronizado ClassNameShould.BeNomedoMetodo
+
+xUnit
+
+
+	- Adicionar projeto:
+	
+		- Visual Studio: 
+	
+			- Dotnet Core: tem template para projeto no Visual Studio 2019
+	
+			- Dotnet Framework: criar um projeto Class Library, e adicionar as seguintes referencias:
+	
+				-> xunit
+				-> xxnit.runner.visualstudio
+		
+		- Linha de comando:
+		
+			(Dotnet Core): dotnet add xunit
+			
+	- Executar os testes
+	
+		- Visual Studio:
+		
+			- Test Explorer: run all ou clicar com o botão direito em cima do teste que se quer executar e selecionar 'Run'
+			
+		- Linha de comando (dentro da pasta do projeto de testes):
+		
+			- dotnet test
+			
+			
+	- Decorators
+	
+		[Fact] 		-> indica ao executor do teste que o método deverá ser executado
+		[Theory] 	-> data driven tests
+		
+	- sut: System Under Test (convenção)
+	
+	Asserts:
+	
+		*retorno do teste: é o valor retornado da chamada do método no 'Act', que será comparado
+		*valor esperado: é o valor esperado para comparação com o retorno do teste
+	
+		- Boolean 
+		
+			Assert.True(retorno do teste)
+			Assert.False(retorno do teste)
+		
+		- String
+		
+			Assert.Equal(valor esperado, retorno do teste)
+			Assert.StartsWith(valor esperado, retorno do teste)
+			Assert.EndsWith(valor esperado, retorno do teste)
+			Assert.Contains(valor esperado, retorno do teste)
+			
+			A comparação de strings é case sensitive. Para ignorar, adicionar o parametro "ignoreCase: true/false" no final
+			
+			Assert.Matches(expressão regular, retorno do teste)
+		
+		- Valores numéricos
+		
+			Assert.Equal(valor esperado, retorno do teste)
+
+				Para valores de ponto flutuante, é possível especificar o número de casas decimais para comparação
+				
+				Assert.Equal(valor esperado, retorno do teste, numero casas decimais)
+				
+				Ao alterar o número de casas decimais, prestar atenção ao arredondamento de valores!
+				
+			Assert.NotEqual(valor, retorno do teste)
+			Assert.True(retorno >= x && retorno <= y)
+			Assert.InRange(retorno do teste, low value, high value)
+			
+				InRange também pode ser tipado, para isso, incluir o tipo:
+				
+					Assert.InRange<tipo>()
+					
+		- Valores Nulos
+		
+			Assert.Null(retorno do teste)
+			Assert.NotNull(retorno do teste)
+		
+		- Listas
+		
+			Assert.Equal(lista de valores, retorno do teste)
+			
+				compara os valores da 'lista de valores' com a lista de 'retorno do teste'
+		
+			Assert.Contains(valor esperado, retorno do teste)
+			Assert.Contains(retorno do teste, expressão lambda)
+			
+				Exemplo: Assert.Contains(alunos, p => p.Nome == "Luiz")
+				
+			Assert.DoesNotContain(valor esperado, retorno do teste)
+			
+			Assert.All(retorno do teste, expressao lambda)
+			
+				Faz um loop comparando item a item
+				
+				Exemplo: Assert.All(alunos, alunos => Assert.False(string.IsNullOrEmpty(alunos.Nome)))
+				
+				Como se trata de um loop, basta que um dos itens falhe para que o teste inteiro falhe.
+			
+		- Objetos
+		
+			Assert.IsType<tipo>(retorno do teste) 
+			Assert.IsNotType<tipo>(retorno do teste)
+			
+				Para os métodos IsType e IsNotType, o teste não funcionará para casos em que o objeto é uma especialização, e
+				estamos comparando com o objeto pai (herança). 
+			
+			Assert.IsAssignableFrom<tipo>(retorno do teste)
+			
+				IsAssignableFrom resolve o problema com a herança, comentada em IsType. 
+			
+			Assert.Same(valor esperado, retorno do metodo)
+			Assert.NotSame(valor esperado, retorno do metodo)
+			
+				Compara o objeto em 'valor esperado' e 'retorno do metodo' são ou não uma mesma instancia de objeto
+		
+		- Exceptions
+		
+			Se durante a execução de um teste for lançada uma exceção, automaticamente aquele teste não vai passar (falha).
+			Em alguns casos, temos que testar se o método lançará a exceção corretamente, para testarmos a regra de negócio.
+			
+			Nestes casos, todo método o qual pode lançar uma exceção explicita, devemos tratar a exceção no Assert, para que
+			tenhamos o controle desse lançamento da exceção e possamos testa-la adequadamente.
+			
+			Assert.Throws<tipo da exceção>(() => chamada do metodo)
+			Assert.Throws<tipo da exceção>(parametro, () => chamada do método)
+			
+			Também é possível capturar a exceção para uma variavel, resultante do Assert, para realizar outros testes
+			
+			<Exceção> ex = Assert.Throws<Exceção>(() => metodo);
+			
+			...
+			
+			Exemplo: 
+				
+				O método CriarAluno espera dois parametros: nome e idade. Dentro desse método, há uma regra dizendo que
+				o nome do aluno é obrigatorio, e caso seja passado vazio ou nulo, deverá ser lançada uma exceção:
+			
+				public Aluno CriarAluno(string nome, int idade)
+				{
+					...
+					if (string.IsNullOrEmpty(nome)
+						throw new ArgumentNullException();
+					...
+				}
+			
+			
+				Para verificar essa exceção, o Assert poderia ser assim:
+				
+				AlunoService sut = new AlunoService();
+				
+				Assert.Throws<ArgumentNullException>( () => sut.CriarAluno(null, 15));
+				
+				Desta forma, a exceção seria capturada e verificada, sem invalidar o teste em si.
+				
+		- Eventos (se um evento foi disparado ou não, etc)
+		
+		
+			Assert.Raise<EventArgs>(
+										handler => sut.Event += handler,
+										handler => sut.Event -= handler,
+										() => sut.Metodo()
+									)
+									
+			Se o evento for criado, retorna true, se não for, retorna false
+			
+			Para classes que implementam INotifyPropertyChange, há outro método no Assert:
+			
+			Assert.PropertyChanged(sut, "propriedade", () => sut.Metodo())
+			
+	Entendendo e controlando o fluxo de testes
+	
+		- Separar os testes por categoria
+		
+			[Trait("Category","Value")]
+		
+			Todos os métodos de teste que tiverem essa assinatura no teste, serão agrupados por categoria no Test Explorer (filtrar por Trait)
+			
+			Se a assinatura estiver na classe de teste e não no método, TODOS os testes desta classe serão agrupados por essa categoria no Test Explorer.
+			
+			- Visual Studio: abrir o Test Explorer, e filtrar por Trait
+			
+			- Linha de comando (dentro da pasta do projeto de testes):
+			
+				dotnet test --filter Category=Value
+				dotnet test --filter "Category=Value|Category=Value2"
+			
+		- Pulando testes
+		
+			[Fact(Skip = "descrição do motivo pelo qual estamos pulando este teste")]
+			
+		- Mostrando mensagens personalizadas no output dos testes
+		
+			- using Xunit.Abstractions;
+			- private readonly ITestOutputHelper _output;
+			- receber no construtor da classe de testes o ITestOutputHelper
+			- no teste, usar _output.WriteLine("mensagem");
+			
+			Visual Studio: aparecerá no resultado do teste um item "Output". Ao clicar neste item, aparecerão todas as mensagens inseridas no teste
+			Linha de comando: necessário adicionar a opção --logger:trx para gerar um arquivo com os outputs. Será criada uma pasta TestResults, com 
+			o arquivo de resultado.
+			
+				dotnet test --logger:trx
+				
+		- Reduzindo duplicidade de código nos testes
+		
+			Parece óbvio, mas podemos criar uma variavel, e instancia-la no construtor da classe de testes, sem ficar instanciando o item nos métodos.
+			Também é óbvio que só devemos fazer desta forma, para os casos em que se aplicar essa solução!
+			
+				private readonly AlunoService _alunoService;
+				
+				public AlunoTest()
+				{
+					_alunoService = new AlunoService();
+				}
+			
+			Se a classe de testes implementar IDisposable, também é possível matar os objetos criados
+			
+			IMPORTANTE: a cada execução de um teste, o construtor da classe é chamado e o dispose acionado ao final! Se a classe possui 15 metodos de teste,
+			a cada teste será chamado o construtor e o dispose (15x)
+			
+		- Compartlhando o contexto durante a execução dos testes
+		
+			Como visto em 'Reduzindo a duplicidade', a cada execução de um teste, o construtor e o dispose da classe serão chamados. Se quisermos compartilhar
+			o código para todos os métodos (manter a mesma instancia criada, por exemplo), devemos:
+			
+			- Criar uma classe separada com os itens que precisamos (literalmente, criar uma classe, com construtor, propriedades, etc)
+			- Na classe do teste, implementar IClassFixture<nome da classe criada>
+			- Criar uma variavel na classe de teste, e receber por injeção de dependencia a classe criada separadamente
+			
+			
+			Exemplo:
+			
+			
+				public class AlunoFixture
+				{
+					public AlunoService aluno { get; set; }
+					
+					public AlunoFixture()
+					{
+						aluno = new AlunoService();
+					}
+				}
+				
+				
+				public class AlunoServiceTest: IClassFixture<AlunoFixture>
+				{
+					public readonly AlunoTeste _alunoTeste;
+					
+					public AlunoServiceTest(AlunoTeste alunoTeste)
+					{
+						_alunoTeste = alunoTeste;
+					}
+				
+					[Fact]
+					public void InserirAlunoSemNome()
+					{
+						...
+						
+						_alunoTeste.Aluno.InserirAluno(teste);
+						
+						...
+					}
+				
+				}
+			
+		- Compartilhando o contexto entre diferentes classes de teste
+		
+			- Criar uma nova classe implementando ICollectionFixture<AlunoFixture>
+			- Pode-se decorar a classe com a anotação [CollectionDefinition("AlunoService collection")]
+			- Nas classes de teste, adicionar a anotação [Collection("AlunoService collection")] (note que o nome é o mesmo usado na anotação da classe Collection
+			  criada no item anterior
+			- Neste caso, não é necessário implementar nenhuma interface. A instancia criada será compartilhada entre as classes
+			
+			[Collection("AlunoService collection")]
+			public class AlunoServiceTest
+				{
+					public readonly AlunoTeste _alunoTeste;
+					
+					public AlunoServiceTest(AlunoTeste alunoTeste)
+					{
+						_alunoTeste = alunoTeste;
+					}
+				
+					[Fact]
+					public void InserirAlunoSemNome()
+					{
+						...
+						
+						_alunoTeste.Aluno.InserirAluno(teste);
+						
+						...
+					}
+				
+				}
+			
+			[Collection("AlunoService collection")]
+			public class AlunoServiceTest2:
+				{
+					public readonly AlunoTeste _alunoTeste;
+					
+					public AlunoServiceTest2(AlunoTeste alunoTeste)
+					{
+						_alunoTeste = alunoTeste;
+					}
+				
+					[Fact]
+					public void InserirAlunoComNomeDiferenteDeJoseDaSilva()
+					{
+						...
+						
+						_alunoTeste.Aluno.InserirAluno(teste);
+						
+						...
+					}
+				}
+				
+	Data-Driven Tests
+	
+		Podemos reduzir a quantidade de testes executados. No caso, quando precisamos testar um mesmo método, mas com inputs
+		diferentes. Ao invés de criar métodos duplicados que fazem a mesma coisa, exceto pela entrada de dados ser diferente,
+		podemos criar a chamada de um único método, passando dados diferentes. Desta forma, não só reduzimos o volume de código
+		gerado para os testes, como melhoramos a manutenção do código dos testes.
+		
+		Possibilidades de se fazer isso com o xUnit: Inline Attribute, Property/Field/Method, Custom Attribute, External Data
+		
+		Para os métodos em que vamos utilizar Dados, usar o atributo [Theory] ao invés de [Fact]. Os metodos que utilizam
+		dados também devem receber esses dados através de parâmetros na assinatura do método.
+		
+		Exemplo geral:
+		
+		[Theory]
+		<<dados>>
+		public void MeuTeste(int valor, int resultadoExperado)
+		{
+			var retornoMetodo = sut.Metodo(valor);
+			
+			Assert.Equal(resultadoExperado, retornoMetodo);
+		}
+		
+		- Inline Attribute
+		
+			Local, para um único método. Implementado pelo desenvolvedor
+			
+			[Theory]
+			[InlineData(valores[])]
+			
+			Os valores são um array de dados, que devem ser passados na sequencia dos parametros que o método espera
+			Podem haver quantos InLineData forem necessários, para contemplar todo os casos de teste desejados
+			
+			
+			Exemplo:
+			
+			[Theory]
+			[InlineData(1, 100)]
+			[InlineData(2, 50)]
+			[InlineData(3, 25)]
+			public void MeuTeste(int valor, int resultadoExperado)
+			{
+				var retornoMetodo = sut.Metodo(valor);
+				
+				Assert.Equal(resultadoExperado, retornoMetodo);
+			}
+			
+			A desvantagem de usar o InLineData é que não conseguimos compartilhar os valores para varios métodos.
+		
+		- Property/Field/Method
+		
+			Compartilhado para varios metodos e varias classes. Implementado pelo desenvolvedor
+			
+			Para compartilhar os dados entre varias classes/metodos, deve-se criar uma nova classe com os dados dos testes.
+			Usar a anotação [MemberData] para referenciar essa classe com os dados.
+			
+			Exemplo:
+			
+			public class MassaDeDados
+			{
+				public IEnumerable<object[]> MeusDados 
+				{
+					get 
+					{
+						yield return new object[] { 1, 100};
+						yield return new object[] { 2, 50};
+						yield return new object[] { 3, 25};
+						yield return new object[] { 4, 15};
+					}
+				}
+			}
+			
+			
+			[Theory]
+			[MemberData("MeusDados", MemberType = typeof(MassaDeDados))]
+			public void MeuTeste(int valor, int resultadoExperado)
+			{
+				var retornoMetodo = sut.Metodo(valor);
+				
+				Assert.Equal(resultadoExperado, retornoMetodo);
+			}
+			
+			Ao invés de passar o nome do método como string, pode-se passar como nameof
+			
+			[MemberData(nameof(MassaDeDados.MeusDados), MemberType = typeof(MassaDeDados))]
+			
+		- External Data
+		
+			Compartilhado para varios metodos e varias classes. Armazenados externamente, e podem ser alterados por outras pessoas
+			
+			O processo aqui é muito semelhante ao 'Property/Field/Method', porém, ao invés de criar os valores hard code como fizemos
+			na lista, deve-se ler os dados de um arquivo externo e converter em uma lista de dados (da mesma forma que em "MeusDados").
+			
+			Assim, podemos manipular os dados dos testes através de um arquivo, por exemplo, e rodar os testes sem precisar alterar o
+			código do teste.
+			
+			IMPORTANTE: alterar a propriedade do arquivo para "Copy Always", para que o arquivo esteja no path do build.
+			
+			
+		- Custom Attribute
+		
+			Compartilhado para varios metodos e varias classes. Implementado pelo desenvolvedor
+		
+			Para criar um custom attribute, deve-se criar uma classe herdando de DataAttribute
+			
+			- using Xunit.SDK
+			- classe
+			
+				public class MinhaClasseAttribute : DataAttribute
+				{
+					public override IEnumarable<object[]> GetData(MethodInfo testMethod)
+					{
+						yield return new object[] { 1, 100};
+						yield return new object[] { 2, 50};
+						yield return new object[] { 3, 25};
+						yield return new object[] { 4, 15};
+					
+					}
+				}
+			
+			- Para usar o método no teste, basta colocar o nome do metodo criado como DataAttribute (sem o sufixo Attribute)
+			
+			
+			[Theory]
+			[MinhaClasse]
+			public void MeuTeste(int valor, int resultadoExperado)
+			{
+				var retornoMetodo = sut.Metodo(valor);
+				
+				Assert.Equal(resultadoExperado, retornoMetodo);
+			}
