@@ -9,6 +9,7 @@ namespace CreditCard.Core
     public class ValidadorNumeroCartao : IValidadorNumeroCartao
     {
         
+
         public bool NumeroValido(string numeroCartao)
         {
             throw new NotImplementedException("Simulação de uma chada real do método");
@@ -22,5 +23,7 @@ namespace CreditCard.Core
         public string Chave => throw new NotImplementedException("Simulação de uma propriedade qualquer");
 
         public ModoValidacao ModoDeValidacao { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+        public event EventHandler ValidacaoRealizada;
     }
 }

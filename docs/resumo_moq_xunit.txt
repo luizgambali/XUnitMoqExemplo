@@ -370,6 +370,14 @@ Moq
 		
 		*VerifySet está acusando erro de deprecated, porém, no curso, não acusava essa mensagem
 		
+	Verificando se uma exceção foi lançada
+
+		Durante o setup do mock, podemos verificar se alguma exception foi lançada. Para isso, configuramos o retorno
+		da configuração para Throws<Exception>():
+		
+		mockObject.Setup(x => x.MockMethod(It.IsAny<string>())).Throws<Exception>();
+		
+		mockObject.Setup(x => x.MockMethod(It.IsAny<string>())).Throws(new Exception("mensagem da exception para mostrar na console log do teste");
 		
 	Strict e Loose Mocks
 	

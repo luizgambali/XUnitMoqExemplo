@@ -176,7 +176,7 @@ namespace CreditCardCore.Tests
 
             validadorCartao.Setup(x => x.ChaveDeAcesso).Returns(mockChave.Object);
 
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object, validadorCartao.Object);
+            var sut = new ValidacaoPropostaObjeto(validadorCartao.Object);
 
             var proposta = new Proposta()
             {
@@ -204,7 +204,7 @@ namespace CreditCardCore.Tests
             validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
             validadorCartao.Setup(x => x.ChaveDeAcesso.Chave).Returns("EXPIRED"); //atribuicao direta do valor
 
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object, validadorCartao.Object);
+            var sut = new ValidacaoPropostaObjeto(validadorCartao.Object);
 
             var proposta = new Proposta()
             {
@@ -338,6 +338,27 @@ namespace CreditCardCore.Tests
 
             //verifica se o método NumeroValido foi acionado durante a execução do teste
             validadorNumeroCartao.VerifySet(x => x.ModoDeValidacao);
+        }
+
+
+        [Fact]
+        [Trait("Category", "Testes retorno com tratamento de erro")]
+        public void ValidarPropostaComErro()
+        {
+            //objeto original
+            var validadorCartao = new Mock<IValidadorNumeroCartao>();
+
+            validadorCartao.Setup(x => x.Chave).Returns("EXPIRED");
+            validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Throws<Exception>();
+            //validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Throws(new Exception("Mensagem para aparecer no console log do teste"));
+
+            var sut = new ValidacaoProposta(validadorCartao.Object);
+
+            var proposta = new Proposta() { Idade = 42 };
+
+            DecisaoAprovacao decisao = sut.ValidarPropostaComErro(proposta);
+
+            Assert.Equal(DecisaoAprovacao.DecisaoManual, decisao);
         }
     }
 }

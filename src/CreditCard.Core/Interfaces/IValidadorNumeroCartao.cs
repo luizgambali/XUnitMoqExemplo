@@ -31,6 +31,8 @@ namespace CreditCard.Core
         string Chave { get; }
 
         ModoValidacao ModoDeValidacao { get; set; }
+
+        event EventHandler ValidacaoRealizada;
     }
     #endregion
 }

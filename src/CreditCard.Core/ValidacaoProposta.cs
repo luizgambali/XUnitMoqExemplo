@@ -14,13 +14,6 @@ namespace CreditCard.Core
         public ValidacaoProposta(IValidadorNumeroCartao validador)
         {
             _validador = validador ?? throw new ArgumentNullException(nameof(validador));
-            _validadorCartao = null; //usado somente em um caso especifico
-        }
-
-        public ValidacaoProposta(IValidadorNumeroCartao validador, IValidadorCartao validadorCartao = null)
-        {
-            _validador = validador ?? throw new ArgumentNullException(nameof(validador));
-            _validadorCartao = validadorCartao;
         }
 
         public DecisaoAprovacao ValidarProposta(Proposta proposta)
@@ -39,6 +32,51 @@ namespace CreditCard.Core
             }
 
             var numeroValido = _validador.NumeroValido(proposta.NumeroCartao);
+
+            if (!numeroValido)
+            {
+                return DecisaoAprovacao.DecisaoManual;
+            }
+
+            if (proposta.Idade <= IdadeMaximaReferenciaAutomatica)
+            {
+                return DecisaoAprovacao.DecisaoManual;
+            }
+
+            if (proposta.RendaBrutaMensal < LimiteRendaInferior)
+            {
+                return DecisaoAprovacao.RecusaAutomatica;
+            }
+
+            return DecisaoAprovacao.DecisaoManual;
+        }
+
+        public DecisaoAprovacao ValidarPropostaComErro(Proposta proposta)
+        {
+            if (proposta.RendaBrutaMensal >= LimiteRendaSuperior)
+            {
+                return DecisaoAprovacao.AceitacaoAutomatica;
+            }
+
+
+            _validador.ModoDeValidacao = proposta.Idade > 30 ? ModoValidacao.Rapido : ModoValidacao.Detalhado;
+
+            if (_validador.Chave == "EXPIRED")
+            {
+                return DecisaoAprovacao.DecisaoManual;
+            }
+
+            bool numeroValido;
+
+            try
+            {
+                numeroValido = _validador.NumeroValido(proposta.NumeroCartao);
+            }
+            catch (Exception)
+            {
+                return DecisaoAprovacao.DecisaoManual;
+            }
+
 
             if (!numeroValido)
             {
