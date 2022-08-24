@@ -11,9 +11,17 @@ namespace CreditCard.Core
         private readonly IValidadorNumeroCartao _validador;
         private readonly IValidadorCartao _validadorCartao;
 
+        public int contadorValidacao { get; private set; }
+
         public ValidacaoProposta(IValidadorNumeroCartao validador)
         {
             _validador = validador ?? throw new ArgumentNullException(nameof(validador));
+            _validador.ValidacaoRealizada += ValidacaoPropostaRealizada;
+        }
+
+        private void ValidacaoPropostaRealizada(object sender, EventArgs e)
+        {
+            contadorValidacao++;
         }
 
         public DecisaoAprovacao ValidarProposta(Proposta proposta)

@@ -1,20 +1,31 @@
 using CreditCard.Core;
 using Moq;
 using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace CreditCardCore.Tests
 {
     public class ModeloPropostaValidacaoTest
     {
+        private Mock<IValidadorNumeroCartao> validadorCartao;
+        private ValidacaoProposta sut;
+
+        public ModeloPropostaValidacaoTest()
+        {
+            validadorCartao = new Mock<IValidadorNumeroCartao>();
+            validadorCartao.SetupAllProperties();
+            validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
+            validadorCartao.Setup(x => x.Chave).Returns("EXPIRED");
+
+            sut = new ValidacaoProposta(validadorCartao.Object);
+        }
+
+
         [Fact]
         [Trait("Category","Testes simples")]
         public void AceitarPropostaAltaRenda()
         {
-            Mock<IValidadorNumeroCartao> validadorCartao = new Mock<IValidadorNumeroCartao>();
-
-            var sut = new ValidacaoProposta(validadorCartao.Object);
-
             var proposta = new Proposta() { RendaBrutaMensal = 100_000 };
 
             DecisaoAprovacao decisao = sut.ValidarProposta(proposta);
@@ -27,20 +38,6 @@ namespace CreditCardCore.Tests
         public void ValidarPropostaPorIdade()
         {
             Mock<IValidadorNumeroCartao> validadorCartao = new Mock<IValidadorNumeroCartao>();
-
-            /*
-              Se o setup do mock não for realizado, a consistência de idade não será executada corretamente.
-              
-              Tanto a consistencia de idade quanto numero da conta retornam DecisaoManual.
-              A consistencia de numero da conta vem antes no método, e se não é passado nenhum 
-              valor, no numero da conta, o método retornará o valor padrao FALSE, e cairá no 
-              "if" que retorna DecisaoManual. Note que, no final deste teste, ele espera DecisaoManual!
-              
-            */
-
-            validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
-
-            var sut = new ValidacaoProposta(validadorCartao.Object);
 
             var proposta = new Proposta() { Idade = 19 };
 
@@ -87,14 +84,7 @@ namespace CreditCardCore.Tests
         [Trait("Category", "Testes simples")]
         public void RecusarPropostaNumeroCartaoInvalido()
         {
-            //Mock<IValidadorNumeroCartao> validadorCartao = new Mock<IValidadorNumeroCartao>(MockBehavior.Strict);
-            Mock<IValidadorNumeroCartao> validadorCartao = new Mock<IValidadorNumeroCartao>(); //foi necessário retirar o strict, pq ao implementa a propriedade Chave, o strict quebra esse teste
-
-
-            //como declaramos o mock como strict, é obrigatorio realizar o setup. Se ele não for realizado, o teste irá falhar
-            validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(false);
-
-            var sut = new ValidacaoProposta(validadorCartao.Object);
+            sut = new ValidacaoProposta(validadorCartao.Object);
 
             var proposta = new Proposta();
 
@@ -195,10 +185,6 @@ namespace CreditCardCore.Tests
         [Trait("Category", "Testes retorno objeto composto")]
         public void ValidarPropostaChaveExpiradaPropriedadeObjetoValorDireto()
         {
-            //objeto original
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
-
             //objeto que simula uma propriedade que está em outro objeto
             var validadorCartao = new Mock<IValidadorCartao>();
             validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
@@ -220,15 +206,23 @@ namespace CreditCardCore.Tests
         [Trait("Category", "Testes verificação alteração de dados propriedade mock object")]
         public void VerificaSeValorDaPropriedadeFoiAlterado()
         {
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-            
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
+            var proposta = new Proposta()
+            {
+                Idade = 19
+            };
 
-            //por padrao, o objeto mockado não guarda a informação.
-            //A linha abaixo permite que o objeto seja alterado e seu valor guardado
-            validadorNumeroCartao.SetupProperty(x => x.ModoDeValidacao); 
+            sut.ValidarProposta(proposta);
 
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object);
+            Assert.Equal(ModoValidacao.Detalhado, validadorCartao.Object.ModoDeValidacao);
+        }
+
+        [Fact]
+        [Trait("Category","Testes verificando se o método ou propriedade foram acionados")]
+        public void VerificaSeNumeroValidoFoiAcionado()
+        {
+            validadorCartao.Setup(x => x.Chave).Returns("OK");
+
+            var sut = new ValidacaoProposta(validadorCartao.Object);
 
             var proposta = new Proposta()
             {
@@ -237,47 +231,18 @@ namespace CreditCardCore.Tests
 
             sut.ValidarProposta(proposta);
 
-            Assert.Equal(ModoValidacao.Detalhado, validadorNumeroCartao.Object.ModoDeValidacao);
-        }
-
-        [Fact]
-        [Trait("Category","Testes verificando se o método ou propriedade foram acionados")]
-        public void VerificaSeNumeroValidoFoiAcionado()
-        {
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
-
-            //por padrao, o objeto mockado não guarda a informação.
-            //A linha abaixo permite que o objeto seja alterado e seu valor guardado
-            validadorNumeroCartao.SetupProperty(x => x.ModoDeValidacao);
-
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object);
-
-            var proposta = new Proposta()
-            {
-                NumeroCartao = "123"
-            };
-
-            sut.ValidarProposta(proposta);
-
             //verifica se o método NumeroValido foi acionado durante a execução do teste
-            validadorNumeroCartao.Verify(x => x.NumeroValido(It.IsAny<string>()),"O método não foi acionado");
+            validadorCartao.Verify(x => x.NumeroValido(It.IsAny<string>()),"O método não foi acionado");
         }
 
         [Fact]
         [Trait("Category", "Testes verificando se o método ou propriedade foram acionados")]
         public void VerificaSeNumeroValidoNaoFoiAcionado()
         {
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
 
             //por padrao, o objeto mockado não guarda a informação.
             //A linha abaixo permite que o objeto seja alterado e seu valor guardado
-            validadorNumeroCartao.SetupProperty(x => x.ModoDeValidacao);
-
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object);
+            validadorCartao.SetupProperty(x => x.ModoDeValidacao);
 
             var proposta = new Proposta()
             {
@@ -287,22 +252,18 @@ namespace CreditCardCore.Tests
             sut.ValidarProposta(proposta);
 
             //verifica se o método NumeroValido foi acionado durante a execução do teste
-            validadorNumeroCartao.Verify(x => x.NumeroValido(It.IsAny<string>()), Times.Never);
+            validadorCartao.Verify(x => x.NumeroValido(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
         [Trait("Category", "Testes verificando se o método ou propriedade foram acionados")]
         public void VerificaSeChaveFoiAcionadoGET()
         {
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
-
             //por padrao, o objeto mockado não guarda a informação.
             //A linha abaixo permite que o objeto seja alterado e seu valor guardado
-            validadorNumeroCartao.SetupProperty(x => x.ModoDeValidacao);
+            validadorCartao.SetupProperty(x => x.ModoDeValidacao);
 
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object);
+            var sut = new ValidacaoProposta(validadorCartao.Object);
 
             var proposta = new Proposta()
             {
@@ -312,21 +273,17 @@ namespace CreditCardCore.Tests
             sut.ValidarProposta(proposta);
 
             //verifica se o método NumeroValido foi acionado durante a execução do teste
-            validadorNumeroCartao.VerifyGet(x => x.Chave);
+            validadorCartao.VerifyGet(x => x.Chave);
         }
         [Fact]
         [Trait("Category", "Testes verificando se o método ou propriedade foram acionados")]
         public void VerificaSeChaveFoiAcionadoSET()
         {
-            var validadorNumeroCartao = new Mock<IValidadorNumeroCartao>();
-
-            validadorNumeroCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Returns(true);
-
             //por padrao, o objeto mockado não guarda a informação.
             //A linha abaixo permite que o objeto seja alterado e seu valor guardado
-            validadorNumeroCartao.SetupProperty(x => x.ModoDeValidacao);
+            validadorCartao.SetupProperty(x => x.ModoDeValidacao);
 
-            var sut = new ValidacaoProposta(validadorNumeroCartao.Object);
+            var sut = new ValidacaoProposta(validadorCartao.Object);
 
             var proposta = new Proposta()
             {
@@ -337,7 +294,7 @@ namespace CreditCardCore.Tests
             sut.ValidarProposta(proposta);
 
             //verifica se o método NumeroValido foi acionado durante a execução do teste
-            validadorNumeroCartao.VerifySet(x => x.ModoDeValidacao);
+            validadorCartao.VerifySet(x => x.ModoDeValidacao);
         }
 
 
@@ -345,14 +302,93 @@ namespace CreditCardCore.Tests
         [Trait("Category", "Testes retorno com tratamento de erro")]
         public void ValidarPropostaComErro()
         {
-            //objeto original
-            var validadorCartao = new Mock<IValidadorNumeroCartao>();
-
-            validadorCartao.Setup(x => x.Chave).Returns("EXPIRED");
             validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Throws<Exception>();
             //validadorCartao.Setup(x => x.NumeroValido(It.IsAny<string>())).Throws(new Exception("Mensagem para aparecer no console log do teste"));
 
             var sut = new ValidacaoProposta(validadorCartao.Object);
+
+            var proposta = new Proposta() { Idade = 42 };
+
+            DecisaoAprovacao decisao = sut.ValidarPropostaComErro(proposta);
+
+            Assert.Equal(DecisaoAprovacao.DecisaoManual, decisao);
+        }
+
+        [Fact]
+        [Trait("Category", "Validacao da proposta com evento")]
+        public void ValidarPropostaComEvento()
+        {
+            validadorCartao.Setup(x => x.Chave).Returns("OK");
+
+            //configuracao do disparo do evento durante a configuração do mock
+            //validadorCartao.Setup(x => x.Chave).Returns("OK").Raises(x => x.ValidacaoRealizada += null, EventArgs.Empty);
+
+            var sut = new ValidacaoProposta(validadorCartao.Object);
+            var proposta = new Proposta() { Idade = 42 };
+
+            sut.ValidarProposta(proposta);
+
+            //disparo do evento no objeto mock
+            validadorCartao.Raise(x => x.ValidacaoRealizada += null, EventArgs.Empty);
+
+            Assert.Equal(1, sut.contadorValidacao);
+        }
+
+        [Fact]
+        [Trait("Category", "Validacao da proposta com multiplas chamadas do método")]
+        public void ValidarPropostaMultiplosRetornos()
+        {
+            validadorCartao.Setup(x => x.Chave).Returns("OK");
+            validadorCartao.SetupSequence(x => x.NumeroValido(It.IsAny<string>()))
+                                        .Returns(false)
+                                        .Returns(true);
+
+            
+            var sut = new ValidacaoProposta(validadorCartao.Object);
+            
+            var proposta = new Proposta() { Idade = 42 };
+
+            DecisaoAprovacao primeiraChamada =  sut.ValidarProposta(proposta);
+            Assert.Equal(DecisaoAprovacao.DecisaoManual, primeiraChamada);
+
+            DecisaoAprovacao segundaChamada = sut.ValidarProposta(proposta);
+            Assert.Equal(DecisaoAprovacao.RecusaAutomatica, segundaChamada);
+        }
+
+        [Fact]
+        [Trait("Category", "Testes de contagem de chamadas para um determinado metodo")]
+        public void ValidarPropostaContagemChamadas()
+        {
+            validadorCartao.Setup(x => x.Chave).Returns("OK");
+
+            var listaValidacoes = new List<string>();
+            validadorCartao.Setup(x => x.NumeroValido(Capture.In(listaValidacoes)));
+            var sut = new ValidacaoProposta(validadorCartao.Object);
+
+            var proposta1 = new Proposta() { Idade = 25, NumeroCartao = "11" };
+            var proposta2 = new Proposta() { Idade = 25, NumeroCartao = "22" };
+            var proposta3 = new Proposta() { Idade = 25, NumeroCartao = "33" };
+
+            sut.ValidarProposta(proposta1);
+            sut.ValidarProposta(proposta2);
+            sut.ValidarProposta(proposta3);
+
+            Assert.Equal(new List<string> {"11","22","33"}, listaValidacoes);
+        }
+
+        [Fact]
+        [Trait("Category", "Configurando parametros com LinqToMoq")]
+        public void ValidarPropostaLinqToMoq()
+        {
+
+            IValidadorNumeroCartao validadorCartao = Mock.Of<IValidadorNumeroCartao>(
+                
+                    validador => validador.Chave == "EXPIRED" &&
+                                 validador.NumeroValido(It.IsAny<string>()) == true
+
+                );
+
+            var sut = new ValidacaoProposta(validadorCartao);
 
             var proposta = new Proposta() { Idade = 42 };
 

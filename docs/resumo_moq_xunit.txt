@@ -133,6 +133,55 @@ Moq
 		- Linha de comando (dentro da pasta do projeto de testes):
 		
 			- dotnet test
+			
+	Strict e Loose Mocks
+	
+		- Por padrão, o Moq cria Loose Mocks. (ao pé da letra, uma simulação de objeto "solta")
+		
+		MockBehavior.Strict
+		
+			- Gera uma exceção se o metodo mockado é chamado, mas não foi configurado
+		
+		MockBehavior.Loose
+		
+			- Nunca gera uma exceção, mesmo que um método simulado seja chamado, mas não tenha sido configurado.
+			- Retorna valores padrão para tipo de valor, nulo para tipos de referência, array vazio/lista
+			
+		MockBehavior.Defailt
+		
+			- Comportamento padrão se nenhum tipo for especificado (MockBehavior.Loose)
+		
+		Para especficar o tipo de teste, colocar o tipo na criação do objeto Mock:
+		
+		
+			var objetoMock = new Mock<ValidadorDeIdade>(MockBehavior.Strict);
+		
+		
+		Importante: o Strict exige que TODOS os métodos e TODAS as propriedades sejam configuradas. Se for implementado
+		um novo teste, para uma nova propriedade, isso deve ser refletido em TODOS os métodos de teste que possuem Strict
+		no metodo de testes, senão os métodos vão quebrar. O que se pode fazer, para este caso, é deixar como Default,
+		pois as configurações existentes serão utilizadas, e nenhuma configuração adicional será necessária para os testes
+		já implementados.
+		
+		
+		Comparação Loose x Strict 
+		
+		Loose
+		
+		- Poucas linhas de configuração
+		- Configuração apenas daquilo que é relevante
+		- Default values
+		- Testes menos frágeis
+		- Testes existentes continuam funcionando
+		
+		Strict
+		
+		- Mais linhas de configuração dos mocks
+		- Talvez seja necessário configurar coisas irrelevantes para os testes
+		- Necessário configurar cada chamada de método
+		- Testes mais frágeis
+		- Testes existentes podem quebrar
+		
 	
 	Instancia simples de uma classe "mockada"
 	
@@ -379,52 +428,70 @@ Moq
 		
 		mockObject.Setup(x => x.MockMethod(It.IsAny<string>())).Throws(new Exception("mensagem da exception para mostrar na console log do teste");
 		
-	Strict e Loose Mocks
+	Eventos
 	
-		- Por padrão, o Moq cria Loose Mocks. (ao pé da letra, uma simulação de objeto "solta")
+		É possivel simular o disparo de eventos em classe de duas formas:
 		
-		MockBehavior.Strict
+		- No setup do mock
 		
-			- Gera uma exceção se o metodo mockado é chamado, mas não foi configurado
-		
-		MockBehavior.Loose
-		
-			- Nunca gera uma exceção, mesmo que um método simulado seja chamado, mas não tenha sido configurado.
-			- Retorna valores padrão para tipo de valor, nulo para tipos de referência, array vazio/lista
+			mockObject.Setup(x => x.MockMethod(It.IsAny<string>())).Returns(retorno).Raises(x => x.NomeDoEvento += null, EventArgs.Empty);
 			
-		MockBehavior.Defailt
+		- No codigo do teste
 		
-			- Comportamento padrão se nenhum tipo for especificado (MockBehavior.Loose)
-		
-		Para especficar o tipo de teste, colocar o tipo na criação do objeto Mock:
-		
-		
-			var objetoMock = new Mock<ValidadorDeIdade>(MockBehavior.Strict);
-		
-		
-		Importante: o Strict exige que TODOS os métodos e TODAS as propriedades sejam configuradas. Se for implementado
-		um novo teste, para uma nova propriedade, isso deve ser refletido em TODOS os métodos de teste que possuem Strict
-		no metodo de testes, senão os métodos vão quebrar. O que se pode fazer, para este caso, é deixar como Default,
-		pois as configurações existentes serão utilizadas, e nenhuma configuração adicional será necessária para os testes
-		já implementados.
-		
-		
-		Comparação Loose x Strict 
-		
-		Loose
-		
-		- Poucas linhas de configuração
-		- Configuração apenas daquilo que é relevante
-		- Default values
-		- Testes menos frágeis
-		- Testes existentes continuam funcionando
-		
-		Strict
-		
-		- Mais linhas de configuração dos mocks
-		- Talvez seja necessário configurar coisas irrelevantes para os testes
-		- Necessário configurar cada chamada de método
-		- Testes mais frágeis
-		- Testes existentes podem quebrar
-		
+			mockObject.Raise(x => x.NomeDoEvento += null, EventArgs.Empty);
+			
+			
+	Obtendo resultados diferentes, quando o método for chamado varias vezes
 	
+		Em determinadas situações, podemos querer que o método retorne valores diferentes quando este for chamado mais de uma vez dentro do teste.
+		Para isso, no setup do método, usar SetupSequence, e adicionar novos Returns para o metodo:
+		
+		mockObject.SetupSequence(x => x.NumeroValido(It.IsAny<string>()))
+								.Returns(true)
+								.Returns(false);
+								
+	Verificando se um método foi chamado "n" vezes com os valores passados
+	
+		Para verificar se um determinado método foi chamado usando uma lista de chamadas, e capturar as chamadas realizadas, cria-se uma lista
+		e usa-se o parametro Capture.In() passando a lista como parametro. Depois, realiza-se a chamada, e compara-se se o resultado é igual ao
+		realizado nas chamadas.
+		
+		Exemplo:
+		
+		[Fact]
+		public void TestMethod()
+        {
+            var mockObject = new Mock<IMockObject>();
+
+            var listaValidacoes = new List<string>();
+			
+            mockObject.Setup(x => x.NumeroValido(Capture.In(listaValidacoes)));
+            
+			var sut = new ObjetoASerTestado(mockObject.Object);
+
+            var teste1 = new ObjetoTeste() { Parametro = "11" };
+            var teste2 = new ObjetoTeste() { Parametro = "22" };
+            var teste3 = new ObjetoTeste() { Parametro = "33" };
+
+            sut.MetodoDeTeste(proposta1);
+            sut.MetodoDeTeste(proposta2);
+            sut.MetodoDeTeste(proposta3);
+
+            Assert.Equal(new List<string> {"11","22","33"}, listaValidacoes);
+        }
+	
+	LinqToMoq
+
+		Há utra forma de realizar o setup de um objeto mock, usando uma sintaxe do LinqToMoq:
+		
+		IValidadorNumeroCartao validadorCartao = Mock.Of<IValidadorNumeroCartao>(
+                    validador => validador.Chave == "EXPIRED" &&
+                                 validador.NumeroValido(It.IsAny<string>()) == true
+
+                );
+	
+		Porém, nessa chamada, ao invés de usar validadorCartao.Object no objeto sut, usa-se apenas validadorCartao:
+		
+		var sut = new ValidacaoProposta(validadorCartao);
+		
+		
