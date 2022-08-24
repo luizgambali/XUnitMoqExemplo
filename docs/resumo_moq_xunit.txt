@@ -494,4 +494,29 @@ Moq
 		
 		var sut = new ValidacaoProposta(validadorCartao);
 		
+	Parametros Genéricos
+	
+		No setup do método, podemos informar um valor para o parametro do método em questão, ou podemos usar It.IsAny<tipo>
+		para especificar que qualquer valor daquele tipo será aceito como parametro.
 		
+		Porém, por algum motivo, podemos querer testar passando um valor qualquer, seja ele int, double, string, etc.
+		
+		Neste caso, o setup deve ser feito com It.IsAny<It.IsAnyType>(). Assim, o método receberá qualquer valor como parametro.
+		
+		Também é possivel testar por herança. Neste caso, usa-se It.IsSubType<Type>
+		
+	Tratamento de métodos asincronos e tasks
+	
+		Para tratamento de métodos assincronos ou tasks, tratamento no Result do setup:
+		
+		Exemplo 1:
+		
+		mockObject.Setup(x => x.MetodoAssincrono(It.IsAny<type>)).Returns(Task.FromResult(new Objeto()));
+		
+		Exemplo 2:
+		
+		mockObject.Setup(x => x.MetodoAssincrono(It.IsAny<type>)).Returns(Task.CompleteTask);
+		
+		Exemplo 3:
+		
+		mockObject.Setup(x => x.MetodoAssincrono(It.IsAny<type>)).ReturnsAsync(44);
