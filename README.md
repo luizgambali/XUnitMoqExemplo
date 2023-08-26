@@ -6,3 +6,13 @@ classes e atributos Este projeto é composto por uma class library (CreditCard.C
 
 - Verificar docs\resumo_xunit.txt para ter uma compreensão melhor do curso em relação ao XUnit
 - Verificar docs\resumo_moq_xunit.txt para ter uma compreensão melhor do curso em relação ao Moq
+
+## Relatorio de Cobertura de Testes
+
+Dentro do projeto de testes, adicionar o seguinte pacote:
+
+dotnet add package coverlet.msbuild
+
+Para rodar os testes e exibir o relatorio de cobertura:
+
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=src/Test/lcov.info [path-do-seu-projeto-de-testes]
